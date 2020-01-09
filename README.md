@@ -1,2 +1,3 @@
-# NightingaleDream
-东方华莺梦 ~ nightingale dream
+# 东方华莺梦 ~ nightingale dream
+这是一个东方同人音乐游戏。
+这里我先画个饼，能不能做出来就看造化了。

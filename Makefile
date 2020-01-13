@@ -1,32 +1,35 @@
 SRCS     := $(wildcard src/*.c)
-OBJS     := $(patsubst src/%.c,%.o,$(SRCS))
+OBJS     := $(subst .c,.o,$(SRCS))
+
+OPT      ?= $(patsubst test/test_%.c,%,$(firstword $(wildcard test/test_*.c)))
+TESTSRCS := $(filter-out src/main.c,$(SRCS)) test/test_$(OPT).c test/unity.c
+TESTOBJS := $(subst .c,.o,$(TESTSRCS))
 
 TARGET   := bin/nd.exe
+TTARGET  := bin/test_$(OPT).exe
 
-CC       := gcc
+CC       := @gcc
 LIBS     := -L./lib
 LDFLAGS  := -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
 DEFINES  := -Dmain=SDL_main
 INCLUDE  := -I./include
 CFLAGS   := -g -Wall -O3 --std=c99 $(DEFINES) $(INCLUDE)
 
+$(TARGET) : $(OBJS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS) $(LIBS)
 
-.PHONY : all objs clean veryclean rebuild
+$(TTARGET) : $(TESTOBJS)
+	$(CC) $(CFLAGS) -o $(TTARGET) $(TESTOBJS) $(LDFLAGS) $(LIBS)
 
-all : $(TARGET)
+.PHONY : test rebuild clean cleanall
 
-objs : $(OBJS)
+test : $(TTARGET)
+	@$(TTARGET)
 
-rebuild: veryclean all
+rebuild : cleanall $(TARGET)
 
 clean :
-	rm -fr *.o
+	@rm -fr src/*.o test/*.o
 
-veryclean : clean
-	rm -fr $(TARGET)
-
-$(TARGET) : $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS) $(LIBS)
-
-$(OBJS) : %.o : src/%.c
-	$(CC) -c $(CFLAGS) $< -o $@
+cleanall : clean
+	@rm -fr bin/*.exe

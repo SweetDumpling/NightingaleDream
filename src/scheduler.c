@@ -12,8 +12,10 @@ static SCHEDULER *scheduler;
 
 static void removeTask(TASK *task)
 {
-    task->prev->next = task->next;
-    task->next->prev = task->prev;
+    if (task->prev)
+        task->prev->next = task->next;
+    if (task->next)
+        task->next->prev = task->prev;
     if (runningTask == task)
         runningTask = task->next;
     if (newTask == task)
@@ -47,9 +49,10 @@ static void moveToRunningTask(TASK *task)
 
 static void run()
 {
-    TASK *currentTask, *task = runningTask;
+    TASK *targetTask, *nextTask, *task = runningTask;
     while (task)
     {
+        nextTask = task->next;
         if (task->priority < 0)
         {
             removeTask(task);
@@ -68,16 +71,15 @@ static void run()
             if (task->target)
                 task->target->currentTask = NULL;
         }
-        task = task->next;
+        task = nextTask;
     }
     task = newTask;
     while (task)
     {
+        nextTask = task->next;
         if (task->priority < 0)
         {
             removeTask(task);
-            task = task->next;
-            continue;
         }
         else if (!task->target)
         {
@@ -86,7 +88,7 @@ static void run()
             else
                 moveToRunningTask(task);
         }
-        else if (!(currentTask = task->target->currentTask))
+        else if (!(targetTask = task->target->currentTask))
         {
             if (task->initialize(task))
                 task->priority = -1;
@@ -96,14 +98,14 @@ static void run()
                 moveToRunningTask(task);
             }
         }
-        else if (task->priority >= currentTask->priority)
+        else if (task->priority >= targetTask->priority)
         {
             if (task->initialize(task))
                 task->priority = -1;
             else
             {
-                currentTask->interrupted(currentTask);
-                currentTask->priority = -1;
+                targetTask->interrupted(targetTask);
+                targetTask->priority = -1;
                 task->target->currentTask = task;
                 moveToRunningTask(task);
             }
@@ -112,14 +114,22 @@ static void run()
         {
             task->priority = -1;
         }
-        task = task->next;
+        task = nextTask;
     }
 }
 
 static void quit()
 {
+    TASK *task = runningTask;
+    while (task)
+    {
+        task->interrupted(task);
+        task = task->next;
+    }
     free(taskPool);
     free(scheduler);
+    scheduler = NULL;
+    taskPool = runningTask = newTask = NULL;
 }
 
 SCHEDULER *getScheduler()
